@@ -1,0 +1,592 @@
+{
+  "name": "starboywears-customer-support-agent",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        96
+      ],
+      "id": "ad9d3fc4-91a5-4666-bf93-277b2bdd633b",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "EOeZXips6dQS20Aa",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "74117128-aaf2-4c36-853e-a36313bc2ae7",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "93405644-d30e-48c9-afbe-02345f1d6a77",
+              "name": "emailDate",
+              "value": "={{ $json.headers.date }}",
+              "type": "string"
+            },
+            {
+              "id": "3ed5da6d-bb22-4ebe-93f1-df64342be396",
+              "name": "to",
+              "value": "={{ $json.headers['delivered-to'] }}",
+              "type": "string"
+            },
+            {
+              "id": "80b250ed-e128-4da3-9b57-83db82668605",
+              "name": "from",
+              "value": "={{ $json.headers.from }}",
+              "type": "string"
+            },
+            {
+              "id": "17066c80-3670-47f1-a9f0-1bb7e8b83757",
+              "name": "subject",
+              "value": "={{ $json.headers.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "97034af7-8745-4cf7-9990-3e86f40fa555",
+              "name": "emailBody",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "09b9c2af-1b9d-4374-ae68-a9723f2a047d",
+              "name": "threadID",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        96
+      ],
+      "id": "13deaa5a-ca5a-4e05-8704-ec083b2f0a1f",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=Prompt:\nAnalyze the content of the following email and determine whether it is related to customer support. If the email pertains to any of the following topics, mark customerSupport as true; otherwise, mark it as false.\n\nCustomer Support Topics Include:\n\n    Questions about order status, tracking, or changes\n\n    Issues with damaged or defective products\n\n    Refund or return requests\n\n    Subscription cancellations or adjustments\n\n    Technical issues with products, website, or app\n\n    Payment or billing inquiries\n\n    Requests for speaking with a support representative\n\nOutput:\n\nRespond with ONLY a valid JSON object\nIt must have a Field name \"customerSupport\" set to true or false\n"
+            },
+            {
+              "content": "=Here is the incoming email:  {{ $json.emailBody }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_schema"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        96
+      ],
+      "id": "75bccea8-2a71-4f9f-8687-788fae0a71fb",
+      "name": "customer-support-evaluation",
+      "credentials": {
+        "openAiApi": {
+          "id": "l0fyMSTTLDjzMnEJ",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4b1c75ab-9c47-4ef9-a88a-d41a2f2bbb05",
+              "name": "={{ JSON.parse($json.output[0].content[0].text.message).customerSupport }}",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        800,
+        96
+      ],
+      "id": "3757c84a-be90-4763-bd61-3b8346fc0a67",
+      "name": "Parsing-customer-support"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output[0].content[0].text.message }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "5b2b05fe-fb1a-43c5-8dae-aeb091d03e9f"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Customer support"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "42ba9849-82b2-461c-b13e-3dd48bb0d2f6",
+                    "leftValue": "={{ $json.output[0].content[0].text.message }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Not customer support"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        96
+      ],
+      "id": "5779da75-127c-49fd-9363-3c9185bc2608",
+      "name": "customer service?"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Edit Fields').item.json.emailBody }}",
+        "options": {
+          "systemMessage": "System Role:\n\nYou are a highly skilled, professional, and empathetic customer support agent for StarboyWears LTD, a fashion and clothing warehouse company specializing in stylish wears for men, women, young adults, and children.\n\nYour role is to assist customers by drafting clear, friendly, and policy-compliant responses to incoming customer support emails regarding orders, shipping, refunds, sizing, exchanges, payments, and general product inquiries.\n\nTask Specification\n\n1. Take an incoming customer support email from a customer.\n\n2. Use the \"StarboyWears-LTD-Customer-Support-Policies-and-FAQS\" tool to search for relevant company policies, FAQs, shipping information, refund rules, or sizing guidance before responding.\n\n3. Create a professional draft response using the \"createDraft\" tool.\n\n\nResponse Requirements\n\nEnsure every response:\n\n- Directly answers the customer’s concern\n- Uses a warm, professional, and empathetic tone\n- Aligns with StarboyWears LTD policies and FAQs\n- Provides clear next steps when necessary\n- Encourages the customer to reach out again if additional help is needed\n\nAll responses must end with the sign-off:\n\n\"Muideen, Customer Support StarboyWears LTD.\"\n\nSpecifics and Context\n\nYou MUST use the \"StarboyWears-LTD-Customer-Support-Policies-and-FAQS\" tool before drafting any customer response to ensure all information is accurate and policy-compliant.\n\nThe \"createDraft\" tool MUST be used to prepare the final customer response draft.\n\nCommon topics include:\n- Shipping delays\n- Order tracking\n- Wrong sizes\n- Exchanges and returns\n- Refund requests\n- Damaged items\n- Payment concerns\n- Product availability\n- Delivery timelines\n\nCompany Policy References\n\n- Orders are processed within 1–3 business days\n- Tracking updates may take 24–72 hours to appear\n- Customers may request returns or exchanges within 14 days of delivery\n- Returned items must remain unused and in original condition\n- Refunds are processed within 5–10 business days after approval\n- Shipping delays may occur during holidays or high-demand periods\n\nExamples\n\nExample 1\n\nIncoming Email:\n\n\"Hi, I placed an order four days ago and I still haven’t received any tracking information. Can you help me?\"\n\nStarboyWears-LTD-Customer-Support-Policies-and-FAQS Search Query:\n\n\"tracking updates shipping processing time\"\n\nRelevant Info Found:\n\nOrders are processed within 1–3 business days. Tracking information may take 24–72 hours to update after shipment confirmation.\n\nDraft Response (via createDraft):\n\nDear [Customer Name],\n\nThank you for contacting StarboyWears LTD.\n\nWe understand your concern regarding your order tracking information. Orders are typically processed within 1–3 business days, and tracking updates may take an additional 24–72 hours to appear after shipment confirmation.\n\nYour order is currently being processed, and you should receive updated tracking information shortly. We appreciate your patience and understanding.\n\nPlease feel free to contact us again if you need any additional assistance.\n\nBest regards,\n\nMuideen,\nCustomer Support StarboyWears LTD.\n\n---\n\nExample 2\n\nIncoming Email:\n\n\"I received the wrong size for the hoodie I ordered. Can I exchange it?\"\n\nStarboyWears-LTD-Customer-Support-Policies-and-FAQS Search Query:\n\n\"exchange policy wrong size return eligibility\"\n\nRelevant Info Found:\n\nCustomers may request exchanges within 14 days of delivery if items remain unused and in original condition.\n\nDraft Response (via createDraft):\n\nDear [Customer Name],\n\nThank you for reaching out to StarboyWears LTD.\n\nWe’re sorry to hear that you received the wrong hoodie size. We can assist you with an exchange under our 14-day exchange policy, provided the item remains unused and in its original condition.\n\nPlease reply with your order number and a photo of the item received so our team can begin the exchange process for you.\n\nWe appreciate your patience and look forward to resolving this quickly.\n\nBest regards,\n\nMuideen,\nCustomer Support StarboyWears LTD.\n\n---\n\nExample 3\n\nIncoming Email:\n\n\"My package says delivered but I haven’t received it.\"\n\nStarboyWears-LTD-Customer-Support-Policies-and-FAQS Search Query:\n\n\"delivered package missing order\"\n\nRelevant Info Found:\n\nCustomers should verify delivery addresses, check with neighbors or household members, and contact support if the package cannot be located within 48 hours.\n\nDraft Response (via createDraft):\n\nDear [Customer Name],\n\nThank you for contacting StarboyWears LTD.\n\nWe’re sorry to hear that your package could not be located after being marked as delivered. We recommend first checking around your delivery area, with neighbors, or with anyone else in your household who may have accepted the package.\n\nIf the package is still missing after 48 hours, please reply with your order number so we can investigate the issue further with the shipping carrier.\n\nWe appreciate your patience and will do our best to assist you.\n\nBest regards,\n\nMuideen,\nCustomer Support StarboyWears LTD.\n\nReminders\n\n- Always use the \"StarboyWears-LTD-Customer-Support-Policies-and-FAQS\" tool before drafting responses\n- Use the \"createDraft\" tool for final email preparation\n- Maintain a professional, friendly, and empathetic tone\n- Ensure all responses align with StarboyWears LTD policies\n- Always sign off using:\n\n\"Muideen, Customer Support StarboyWears LTD.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1344,
+        -336
+      ],
+      "id": "1fbf78f8-a721-4cdc-8b29-2c412a844857",
+      "name": "Customer-support-Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1264,
+        -96
+      ],
+      "id": "9664940b-ef36-4fc4-a8f0-0e1c0c507e2a",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "l0fyMSTTLDjzMnEJ",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Retrieve information about starboywears-LTD customer support policies and FAQs",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "simple-sample",
+          "mode": "list",
+          "cachedResultName": "simple-sample"
+        },
+        "options": {
+          "pineconeNamespace": "starboywears-ltd"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        1376,
+        -96
+      ],
+      "id": "34269b16-09ba-46d9-8ea3-2d1d0e14b716",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "9jVGuT3cLY0KpiQH",
+          "name": "Pinecone account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1456,
+        112
+      ],
+      "id": "e2e336a6-6609-4fbe-b380-40bab1e69425",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "l0fyMSTTLDjzMnEJ",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('subject', 'Email subject for the draft reply') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('emailBody', 'Email body content for the draft reply') }}",
+        "options": {
+          "threadId": "={{ $(\"Edit Fields\").item.json.threadID }}",
+          "sendTo": "={{ $(\"Edit Fields\").item.json.from }}"
+        }
+      },
+      "id": "15f891fd-4b42-419c-8bb5-33923c60d9a3",
+      "name": "Create Draft Tool",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        1664,
+        -96
+      ],
+      "webhookId": "8a022a5a-1bcf-4a6e-bd86-178618cefc06",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "EOeZXips6dQS20Aa",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "lilpweshlee@gmail.com",
+        "subject": "=Draft Ready for Review - {{ $(\"Edit Fields\").item.json.subject }}",
+        "emailType": "text",
+        "message": "=A customer support draft has been prepared.\n\nCustomer Subject:\n{{ $(\"Edit Fields\").item.json.subject }}\n\nThread ID:\n{{ $(\"Edit Fields\").item.json.threadID }}\n\nPlease review the draft in Gmail before sending.",
+        "options": {}
+      },
+      "id": "df0e5e28-1e1d-49b9-ae0e-ae59ed0bfff7",
+      "name": "Notify Human Reviewer",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1888,
+        -112
+      ],
+      "webhookId": "03f8e5f3-b213-40aa-9638-cf54e959cd1a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "EOeZXips6dQS20Aa",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $(\"Gmail Trigger\").item.json.id }}",
+        "labelIds": [
+          "NON_SUPPORT"
+        ]
+      },
+      "id": "f7db8956-5049-4e36-9671-1035ebf61633",
+      "name": "Label Non Support Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1456,
+        288
+      ],
+      "webhookId": "04e69cbb-493e-4e86-ad4b-fcbac3bc045e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "EOeZXips6dQS20Aa",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "19e10a109c91bbb2",
+          "threadId": "19e10a109c91bbb2",
+          "labelIds": [
+            "UNREAD",
+            "IMPORTANT",
+            "CATEGORY_PERSONAL",
+            "INBOX"
+          ],
+          "sizeEstimate": 7801,
+          "headers": {
+            "delivered-to": "Delivered-To: lilpweshlee@gmail.com",
+            "received": "Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])\r\n        by mx.google.com with SMTPS id ffacd0b85a97d-4548f8f8ab1sor857715f8f.2.2026.05.09.23.44.09\r\n        for <lilpweshlee@gmail.com>\r\n        (Google Transport Security);\r\n        Sat, 09 May 2026 23:44:09 -0700 (PDT)",
+            "x-received": "X-Received: by 2002:adf:ef48:0:b0:452:11f9:bc40 with SMTP id\r\n ffacd0b85a97d-452120902c3mr19519344f8f.2.1778395448497; Sat, 09 May 2026\r\n 23:44:08 -0700 (PDT)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1778395449; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=WvcO+kK/96ZHmJIehHCbbKZ+WDYXzzWIpYp9CPaPyES+//CudPbs1FLK68lAKJFPT8\r\n         Qw0iOtDGXg9ctfsdiQ7G6Njl2S4m3z8BpKQcVc4IxeCZOeo3Jd8Au4HVfq2scRwqHdgM\r\n         EFEyvFxNwPHcERS7SR1yQm/qo8ggW74ad5Z2J6sj+69rMaEYe9QtbjSRBbcBDT0R14RK\r\n         NkK2vUFS3V7OfEwQtsr1k9JgRUtZM55JST5uQxFkgkhIFFO0C643pEwFrkpbL1dA6+4n\r\n         ElZyCEkIKfIz6+ASG5SRXaR0HJEMv5I2JmA9mt+r+IIlrKQS5BYer1/XoCKjHaD4Ycjn\r\n         b2Ng==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=to:subject:message-id:date:from:mime-version:dkim-signature;\r\n        bh=D0s/SSKtQo6wLTgWPUKHp+GpFa8JTlhARKNFrkH1r0U=;\r\n        fh=GX9H2U3CJuU5uunCUkaQc4Vmeh+ShWZqpbyKRXQ8kLI=;\r\n        b=Qn3YJbci5uJjD1A8/6aedq+h+aWmEAc4Q6pxX2y/MGmdY+OUDXpXZJvkvSmpzxfJWq\r\n         C9nkbttThg097U9nRPGDWnmTThmDLgbin2sNuGdhsFvAaNy9rqWNZERgLy7QJxajgiKD\r\n         eD+KEx3LXLHHbbbyRHm1pMXMk3S+RGGHYGEQwkvCj/LaQIKzlI59KiFQjUuu/4LMjdWD\r\n         f/U2sw16sV1OhOK/dGGL6qo1mGX+hX7J5DCxCW6ZHsKfXtDouOS2rLAuHWV2w9q7DDEP\r\n         rSIvynTTDMg9eRO+8OkLLK0hoNEpstda4knzdBwc4MNWMEb+gAd2Ehgm26D8auiOvYh5\r\n         PIow==;\r\n        dara=google.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com; arc=none",
+            "return-path": "Return-Path: <ilorimuideen0000@gmail.com>",
+            "received-spf": "Received-SPF: pass (google.com: domain of ilorimuideen0000@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       dkim=pass header.i=@gmail.com header.s=20251104 header.b=VLMQn5YZ;\r\n       arc=pass (i=1);\r\n       spf=pass (google.com: domain of ilorimuideen0000@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=ilorimuideen0000@gmail.com;\r\n       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;\r\n       dara=pass header.i=@gmail.com",
+            "dkim-signature": "DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=gmail.com; s=20251104; t=1778395449; x=1779000249; dara=google.com;\r\n        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject\r\n         :date:message-id:reply-to;\r\n        bh=D0s/SSKtQo6wLTgWPUKHp+GpFa8JTlhARKNFrkH1r0U=;\r\n        b=VLMQn5YZzSqvn8Ah5UQYKLGTEdbzvsrutu264qPetbJftapPs9HImDcawK7zWDjNww\r\n         6jarPYthzmlln6CfGiSPjcYZw0UzKXQYfusyxfvQvyAiiFy4lzNymlz6qoT5CfyKcEoo\r\n         TG3fptLlnve/fx0yiXlyU5SiPBJM+BmheK8yn9o51nv5psPCxuXnm6RAl8UefUSS3UJI\r\n         EKXFaRvmwEobe3/f8z7L/zuhi5NycDdeGaRqsUZJ0vpuCFVQazFJu2JbNryg8v11Ug/x\r\n         F9pMquRtmF3ohBrtZygmRBtyqWo4ZY0eLcEzjMzHPyNhuf3tf31SJwX+0suj7pGGzo9n\r\n         ELmg==",
+            "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20251104; t=1778395449; x=1779000249;\r\n        h=to:subject:message-id:date:from:mime-version:x-gm-gg\r\n         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;\r\n        bh=D0s/SSKtQo6wLTgWPUKHp+GpFa8JTlhARKNFrkH1r0U=;\r\n        b=C+/8gEmjG6folV7CNraZhR+Z8Fv2iIVVr5qs6sLo//psiXKJ1dDdXERS4ywwmF6JFZ\r\n         F6lAfTmtY7m29MdoNxsHxpxrGF1iLq8re5VrBbKlvAn6b8HgxALNupg9DooC5BDRqrSz\r\n         IBcI1P5CzwPrOZb9Ok0QC+EUjkg4HY0edlLKfHVIoXgE/KeiJTuEORvvsYDRBw9FkCwq\r\n         9USi/dRn9/ifwJUg+HkZmsnoQnKxkh0XxkHQvC9kx9iihk75E/1O5W00PEP3xLbl+zy4\r\n         xNUBq0vwWupGSbGi2yxd9M9Nj2ZJXxkDsVBdwbKFAlGxgyWd3CVOdUXfWm0Gd8DsmeBE\r\n         NDWA==",
+            "x-gm-message-state": "X-Gm-Message-State: AOJu0YwxhE83qUeJt6wHuzqcv6SdZnNqDZb/5vOKjIk2V8oiTZw8sgB/\r\n\tfGYMhMWU09XPAxn1kfksE5Og0nJ9w9Q9A1PKq1xFLT4R7xFZDZnVzVcDLPDr/jHUlDABjmosy6P\r\n\teeHPE/xlY/fvU1a2SE4r3OT12Sy+AfEgzX+cLmL/Pla68",
+            "x-gm-gg": "X-Gm-Gg: Acq92OHJWfatLi/DkozwVuMuEKOCySMZJPUYU5hvRcXioJfpAbjZp79UcMHrVFQLlWT\r\n\tV4VAkMBz4+1yiCKKesVnKSgIynYC1sMSq18wxDdxjuK+HdslDY+RbZukl2iBrtmerqvWqPjRuUr\r\n\tJ1HZyyKnSWE8b/smwuKNKRoA9K9nTvrr//ivAK3TGXw49YU+XVEdG7wAG7AYDpTr1NI76ggK4H1\r\n\tGAm5p9e3MzPZrWd4bg8YyFRxCqn2yRrO3qjNqb6vT79EI5dx8tQe8cwg0sE4y2jWVhQvwg8Y7lo\r\n\t5TfHBIbzXdXNrWDfpzlzfA8+5fw2Hc7pgqPsgdshGjI61O1UpbIl",
+            "mime-version": "MIME-Version: 1.0",
+            "from": "From: Muideen <ilorimuideen0000@gmail.com>",
+            "date": "Date: Sun, 10 May 2026 01:43:26 -0500",
+            "x-gm-features": "X-Gm-Features: AVHnY4KMY8ykWdej_TkWvTSdolppbIDFwuQLBGXL2hFlL_96pfJmEOARk6oizRY",
+            "message-id": "Message-ID: <CAB1f46JgR_eicB=2OVqj-oNX0KHnLbZZ6CMzNUjcKCfcP9NiHQ@mail.gmail.com>",
+            "subject": "Subject: Assistance Needed: Order Status and Refund Policy Inquiry",
+            "to": "To: starboywears <lilpweshlee@gmail.com>",
+            "content-type": "Content-Type: multipart/alternative; boundary=\"000000000000fa5ad6065170f441\""
+          },
+          "html": "<div dir=\"ltr\"><p><b>Dear Support Team,</b></p><p>I am writing to follow up on my recent order. I was wondering how I can <b>track my order</b> as the status hasn&#39;t updated in several days. Additionally, could you please provide details on what your <b>refund policy</b> is in case the item does not meet my requirements?</p><p>Thank you for your help.</p><p>Best regards,</p><p><b>Muideen.</b></p></div>\n",
+          "text": "*Dear Support Team,*\n\nI am writing to follow up on my recent order. I was wondering how I can *track\nmy order* as the status hasn't updated in several days. Additionally, could\nyou please provide details on what your *refund policy* is in case the item\ndoes not meet my requirements?\n\nThank you for your help.\n\nBest regards,\n\n*Muideen.*\n",
+          "textAsHtml": "<p>*Dear Support Team,*</p><p>I am writing to follow up on my recent order. I was wondering how I can *track<br/>my order* as the status hasn&apos;t updated in several days. Additionally, could<br/>you please provide details on what your *refund policy* is in case the item<br/>does not meet my requirements?</p><p>Thank you for your help.</p><p>Best regards,</p><p>*Muideen.*</p>",
+          "subject": "Assistance Needed: Order Status and Refund Policy Inquiry",
+          "date": "2026-05-10T06:43:26.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "lilpweshlee@gmail.com",
+                "name": "starboywears"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">starboywears</span> &lt;<a href=\"mailto:lilpweshlee@gmail.com\" class=\"mp_address_email\">lilpweshlee@gmail.com</a>&gt;</span>",
+            "text": "\"starboywears\" <lilpweshlee@gmail.com>"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "ilorimuideen0000@gmail.com",
+                "name": "Muideen"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Muideen</span> &lt;<a href=\"mailto:ilorimuideen0000@gmail.com\" class=\"mp_address_email\">ilorimuideen0000@gmail.com</a>&gt;</span>",
+            "text": "\"Muideen\" <ilorimuideen0000@gmail.com>"
+          },
+          "messageId": "<CAB1f46JgR_eicB=2OVqj-oNX0KHnLbZZ6CMzNUjcKCfcP9NiHQ@mail.gmail.com>"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "customer-support-evaluation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "customer-support-evaluation": {
+      "main": [
+        [
+          {
+            "node": "Parsing-customer-support",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsing-customer-support": {
+      "main": [
+        [
+          {
+            "node": "customer service?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "customer service?": {
+      "main": [
+        [
+          {
+            "node": "Customer-support-Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Label Non Support Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Customer-support-Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Customer-support-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer-support-Agent": {
+      "main": [
+        [
+          {
+            "node": "Notify Human Reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Draft Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Customer-support-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "55e63519-6524-46ea-bae0-bdb35fc125e8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0d4de968499566fe92547a3d36ac5fb4f92785c55f63e90e873bcbccac5298a1"
+  },
+  "id": "uib9xZLL8BGoZo38",
+  "tags": []
+}
