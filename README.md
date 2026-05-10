@@ -6,6 +6,23 @@ This project automatically classifies incoming emails, retrieves relevant suppor
 
 ---
 
+# Main Customer Support Workflow
+
+<p align="center">
+  <img src="./screenshots/v1-Customer-Support-AI-Agent.png" alt="Customer Support Workflow" width="1000"/>
+</p>
+
+---
+
+# Pinecone Knowledge Base Ingestion Workflow
+
+<p align="center">
+  <img src="./screenshots/doc-pinecone-successful-execute-workflow.png" alt="Pinecone Ingestion Workflow" width="1000"/>
+</p>
+
+---
+
+
 # Project Overview
 
 This workflow automates customer support triage and response drafting using AI while maintaining human oversight for quality assurance.
